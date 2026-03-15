@@ -12,8 +12,10 @@ from flask_login import current_user, login_user, logout_user, login_required
 from FlaskWebProject.models import User, Post
 import msal
 import uuid
+import logging
 
-imageSourceUrl = 'https://' + app.config['BLOB_ACCOUNT'] + '.blob.core.windows.net/' + app.config['BLOB_CONTAINER'] + '/'
+# Blob Storage image URL
+imageSourceUrl = f"https://{app.config['BLOB_ACCOUNT']}.blob.core.windows.net/{app.config['BLOB_CONTAINER']}/"
 
 
 @app.route('/')
@@ -83,10 +85,12 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
 
         if user is None or not user.check_password(form.password.data):
+            logging.warning("Invalid login attempt")
             flash('Invalid username or password')
             return redirect(url_for('login'))
 
         login_user(user, remember=form.remember_me.data)
+        logging.info(f"{user.username} logged in successfully")
 
         next_page = request.args.get('next')
 
@@ -129,7 +133,7 @@ def authorized():
         if "error" in result:
             return render_template("auth_error.html", result=result)
 
-        session["user"] = result.get("id_token_claims")
+        session["user"] = result.get("id_token_claims", {})
 
         user = User.query.filter_by(username="admin").first()
         login_user(user)
